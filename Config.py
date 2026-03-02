@@ -59,6 +59,9 @@ BIO_MESSAGE = "KingBot Spam Botu Tarafından Korunmaktadır."
 SPAM_DELAY = 0.2
 BIGSPAM_DELAY = 0.3
 
+# Varsayılan katılınacak kanallar (boş bırakın)
+DEFAULT_JOIN_CHANNELS = []
+
 if not API_ID or not API_HASH:
     logger.warning("API_ID veya API_HASH eksik! Bot düzgün çalışmayabilir.")
 
