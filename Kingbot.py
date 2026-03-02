@@ -433,9 +433,16 @@ async def clone_handler(e):
         except Exception:
             await e.client(UpdateProfileRequest(first_name=first, last_name=last_val if last_val else None))
         try:
-            photo_path = await e.client.download_profile_photo(entity, file="clone_pp.jpg")
-            if photo_path:
-                await e.client.upload_profile_photo(photo_path)
+            photos = await e.client.get_profile_photos(entity, limit=1)
+            photo_path = None
+            if photos:
+                photo_path = await e.client.download_media(photos[0], file="clone_pp.jpg")
+            if photo_path and os.path.exists(photo_path):
+                try:
+                    up_file = await e.client.upload_file(photo_path)
+                    await e.client(functions.photos.UploadProfilePhotoRequest(file=up_file))
+                except Exception:
+                    await e.client.upload_profile_photo(photo_path)
             # Temizlik
             try:
                 if photo_path and os.path.exists(photo_path):
