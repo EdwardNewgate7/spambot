@@ -55,6 +55,10 @@ BIO_MESSAGE = "KingBot Spam Botu Tarafından Korunmaktadır."
 # KONTROLLER (Burası kodun çalışması içindir, değiştirmeyin)
 # ==============================================================================
 
+# Hız limitleri
+SPAM_DELAY = 0.2
+BIGSPAM_DELAY = 0.3
+
 if not API_ID or not API_HASH:
     logger.warning("API_ID veya API_HASH eksik! Bot düzgün çalışmayabilir.")
 
