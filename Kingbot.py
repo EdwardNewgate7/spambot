@@ -422,21 +422,26 @@ async def clone_handler(e):
     try:
         entity = await e.client.get_entity(reply_msg.sender_id)
         full = await e.client(functions.users.GetFullUserRequest(entity))
-        first = entity.first_name or ""
-        last = entity.last_name or None
-        about = getattr(full.full_user, "about", None)
+        # İsim/bio sınırlarını Telegram limitlerine göre güvenli hale getir
+        first = (entity.first_name or entity.username or "Kullanıcı")[:64]
+        last_val = (entity.last_name or "")[:64]
+        about_val = getattr(full.full_user, "about", None)
+        if about_val:
+            about_val = about_val[:70]
         try:
-            await e.client(UpdateProfileRequest(first_name=first, last_name=last, about=about))
+            await e.client(UpdateProfileRequest(first_name=first, last_name=last_val if last_val else None, about=about_val))
         except Exception:
-            await e.client(UpdateProfileRequest(first_name=first, last_name=last))
+            await e.client(UpdateProfileRequest(first_name=first, last_name=last_val if last_val else None))
         try:
             photo_path = await e.client.download_profile_photo(entity, file="clone_pp.jpg")
             if photo_path:
                 await e.client.upload_profile_photo(photo_path)
-                try:
+            # Temizlik
+            try:
+                if photo_path and os.path.exists(photo_path):
                     os.remove(photo_path)
-                except Exception:
-                    pass
+            except Exception:
+                pass
         except Exception:
             pass
         await msg.edit("Klonlama tamamlandı.")
@@ -561,4 +566,3 @@ _______  _  _  _____  _ _
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
-
