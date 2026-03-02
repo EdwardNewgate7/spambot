@@ -14,7 +14,7 @@ from telethon.tl.functions.account import UpdateProfileRequest
 import telethon.utils
 
 # Local imports
-from Config import SESSIONS, SUDO, API_ID, API_HASH
+from Config import SESSIONS, SUDO, API_ID, API_HASH, SPAM_DELAY, BIGSPAM_DELAY
 from Utils import RAID, RRAID
 
 # Setup logging
@@ -162,18 +162,23 @@ async def spam_handler(e):
     # Case 1: .spam 10 Message text
     if len(params) == 2:
         message = params[1]
-        await asyncio.wait([e.respond(message) for _ in range(count)])
+        for _ in range(count):
+            await e.respond(message)
+            await asyncio.sleep(SPAM_DELAY)
         
     # Case 2: .spam 10 (reply to media)
     elif reply_msg and reply_msg.media:
         for _ in range(count):
             sent = await e.client.send_file(e.chat_id, reply_msg, caption=reply_msg.text)
             await gifspam(e, sent)
+            await asyncio.sleep(SPAM_DELAY)
             
     # Case 3: .spam 10 (reply to text)
     elif reply_msg and reply_msg.text:
         message = reply_msg.text
-        await asyncio.wait([e.respond(message) for _ in range(count)])
+        for _ in range(count):
+            await e.respond(message)
+            await asyncio.sleep(SPAM_DELAY)
     else:
         await e.reply(usage)
 
@@ -250,21 +255,21 @@ async def bigspam_handler(e):
                     await reply_msg.reply(message)
                 else:
                     await e.client.send_message(e.chat_id, message)
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(BIGSPAM_DELAY)
             
     elif reply_msg and reply_msg.media:
         for _ in range(count):
             async with e.client.action(e.chat_id, "document"):
                 sent = await e.client.send_file(e.chat_id, reply_msg, caption=reply_msg.text)
                 await gifspam(e, sent)
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(BIGSPAM_DELAY)
             
     elif reply_msg and reply_msg.text:
         message = reply_msg.text
         for _ in range(count):
             async with e.client.action(e.chat_id, "typing"):
                 await e.client.send_message(e.chat_id, message)
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(BIGSPAM_DELAY)
     else:
         await e.reply(usage)
 
