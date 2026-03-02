@@ -14,7 +14,7 @@ from telethon.tl.functions.account import UpdateProfileRequest
 import telethon.utils
 
 # Local imports
-from Config import SESSIONS, SUDO, API_ID, API_HASH, SPAM_DELAY, BIGSPAM_DELAY
+from Config import SESSIONS, SUDO, API_ID, API_HASH, SPAM_DELAY, BIGSPAM_DELAY, DEFAULT_JOIN_CHANNELS
 from Utils import RAID, RRAID
 
 # Setup logging
@@ -40,12 +40,12 @@ async def start_clients():
             client = TelegramClient(StringSession(session), API_ID, API_HASH)
             await client.start()
             
-            # Join default channels
-            try:
-                await client(JoinChannelRequest(channel="@KINGBOTOFFICIAL"))
-                await client(JoinChannelRequest(channel="@KINGBOTOFFICIALCHAT"))
-            except Exception as e:
-                logger.warning(f"Client {i} failed to join channel: {e}")
+            # Join default channels (optional)
+            for ch in DEFAULT_JOIN_CHANNELS:
+                try:
+                    await client(JoinChannelRequest(channel=ch))
+                except Exception as e:
+                    logger.warning(f"Client {i} failed to join channel {ch}: {e}")
             
             me = await client.get_me()
             bot_id = telethon.utils.get_peer_id(me)
@@ -409,7 +409,7 @@ async def restart_handler(e):
 
 async def help_handler(e):
     if e.sender_id not in SMEX_USERS: return
-    text = "⚡Komutlar⚡\n\nYardımcı:\n.ping\n.restart\n\nKullanıcı:\n.bio\n.join\n.pjoin\n.leave\n.clone\n\nSpam:\n.spam\n.delayspam\n.bigspam\n.raid\n.replyraid\n.dreplyraid"
+    text = "⚡Komutlar⚡\n\nYardımcı:\n.ping\n.restart\n\nKullanıcı:\n.bio\n.join\n.pjoin\n.leave\n.clone\n\nModerasyon:\n.lockdown\n.unlockdown\n.purge <adet>\n\nSpam:\n.spam\n.delayspam\n.bigspam\n.raid\n.replyraid\n.dreplyraid"
     await e.reply(text)
 
 async def clone_handler(e):
@@ -443,6 +443,76 @@ async def clone_handler(e):
     except Exception as err:
         await msg.edit(f"Hata: {err}")
 
+async def lockdown_handler(e):
+    if e.sender_id not in SMEX_USERS: return
+    msg = await e.reply("Sohbet kilitleniyor...")
+    try:
+        rights = types.ChatBannedRights(
+            until_date=None,
+            send_messages=True,
+            send_media=True,
+            send_stickers=True,
+            send_gifs=True,
+            send_games=True,
+            send_inline=True,
+            embed_links=True,
+            send_polls=True,
+            change_info=False,
+            invite_users=False,
+            pin_messages=False,
+        )
+        try:
+            await e.client(functions.channels.EditDefaultBannedRights(channel=e.chat_id, banned_rights=rights))
+        except Exception:
+            await e.client(functions.messages.EditChatDefaultBannedRights(peer=e.chat_id, banned_rights=rights))
+        await msg.edit("Sohbet kilitlendi (mesaj gönderimi kapalı).")
+    except Exception as err:
+        await msg.edit(f"Hata: {err}")
+
+async def unlockdown_handler(e):
+    if e.sender_id not in SMEX_USERS: return
+    msg = await e.reply("Sohbet açılıyor...")
+    try:
+        rights = types.ChatBannedRights(
+            until_date=None,
+            send_messages=False,
+            send_media=False,
+            send_stickers=False,
+            send_gifs=False,
+            send_games=False,
+            send_inline=False,
+            embed_links=False,
+            send_polls=False,
+            change_info=False,
+            invite_users=False,
+            pin_messages=False,
+        )
+        try:
+            await e.client(functions.channels.EditDefaultBannedRights(channel=e.chat_id, banned_rights=rights))
+        except Exception:
+            await e.client(functions.messages.EditChatDefaultBannedRights(peer=e.chat_id, banned_rights=rights))
+        await msg.edit("Sohbet açıldı (mesaj gönderimi serbest).")
+    except Exception as err:
+        await msg.edit(f"Hata: {err}")
+
+async def purge_handler(e):
+    if e.sender_id not in SMEX_USERS: return
+    usage = "Kullanım: .purge <adet>"
+    args = e.text.split(maxsplit=1)
+    if len(args) < 2:
+        return await e.reply(usage)
+    try:
+        count = int(args[1])
+    except ValueError:
+        return await e.reply(usage)
+    msg = await e.reply("Siliniyor...")
+    try:
+        msgs = await e.client.get_messages(e.chat_id, limit=count)
+        await e.client.delete_messages(e.chat_id, [m.id for m in msgs])
+        await msg.edit(f"{count} mesaj silindi.")
+    except Exception as err:
+        await msg.edit(f"Hata: {err}")
+
 # --- Main Registration ---
 
 def register_handlers():
@@ -461,6 +531,9 @@ def register_handlers():
         client.add_event_handler(restart_handler, events.NewMessage(pattern=r"\.restart"))
         client.add_event_handler(help_handler, events.NewMessage(pattern=r"\.help"))
         client.add_event_handler(clone_handler, events.NewMessage(pattern=r"\.clone"))
+        client.add_event_handler(lockdown_handler, events.NewMessage(pattern=r"\.lockdown"))
+        client.add_event_handler(unlockdown_handler, events.NewMessage(pattern=r"\.unlockdown"))
+        client.add_event_handler(purge_handler, events.NewMessage(pattern=r"\.purge"))
         
         # Auto reply handler (no pattern, just checks QUE)
         client.add_event_handler(auto_reply_handler, events.NewMessage(incoming=True))
